@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>つきまちカラオケ大会 BEST10</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #1a0505;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+
+  .form-title {
+    color: #f5c842;
+    font-size: 20px;
+    font-weight: 900;
+    margin-bottom: 24px;
+    text-align: center;
+    letter-spacing: 2px;
+    text-shadow: 0 0 12px #f5c842;
+  }
+
+  .form-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 28px;
+    width: 100%;
+    max-width: 700px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 24px;
+  }
+
+  .rank-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .rank-label {
+    font-size: 16px;
+    font-weight: 900;
+    width: 36px;
+    flex-shrink: 0;
+    text-align: center;
+  }
+  .rank-1 { color: #f5c842; text-shadow: 0 0 10px #f5c842; }
+  .rank-2 { color: #c0c0c0; text-shadow: 0 0 8px #c0c0c0; }
+  .rank-3 { color: #cd7f32; text-shadow: 0 0 8px #cd7f32; }
+  .rank-other { color: #aaaaaa; }
+
+  .rank-row input {
+    flex: 1;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    color: #fff;
+    font-family: inherit;
+    min-width: 0;
+  }
+  .rank-row input::placeholder { color: rgba(255,255,255,0.3); }
+  .rank-row input:focus { outline: none; border-color: #f5c842; }
+
+  .btn-preview {
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px;
+    background: linear-gradient(135deg, #c8a600, #f5c842);
+    color: #1a0505;
+    font-size: 16px;
+    font-weight: 900;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: opacity 0.15s;
+  }
+  .btn-preview:hover { opacity: 0.85; }
+
+  /* フルスクリーンプレビュー */
+  .preview-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: #1a0505;
+  }
+  .preview-overlay.show { display: block; }
+
+  .preview-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, #8b0000 0%, #3d0000 40%, #1a0505 70%);
+  }
+
+  .curtain-left, .curtain-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 8%;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .curtain-left { left: 0; background: linear-gradient(to right, #8b0000, transparent); }
+  .curtain-right { right: 0; background: linear-gradient(to left, #8b0000, transparent); }
+
+  .sparkles { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+  .sparkle {
+    position: absolute;
+    border-radius: 50%;
+    background: #f5c842;
+    animation: twinkle 2s infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 1; transform: scale(1.5); }
+  }
+
+  .preview-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* コンテンツ全体 */
+  .preview-content {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2vh 8% 3vh;
+  }
+
+  /* タイトル */
+  .preview-title-sub {
+    font-size: clamp(10px, 1.6vw, 18px);
+    color: #fff;
+    letter-spacing: 4px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.15);
+    padding: 3px 20px;
+    border-radius: 20px;
+    margin-bottom: 0.8vh;
+    border: 1px solid rgba(255,255,255,0.3);
+    white-space: nowrap;
+  }
+
+  .preview-title-main {
+    font-size: clamp(32px, 7vw, 90px);
+    font-weight: 900;
+    letter-spacing: 4px;
+    margin-bottom: 1.5vh;
+    background: linear-gradient(180deg, #fff700 0%, #f5c842 40%, #c8860a 70%, #f5c842 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 12px rgba(245,200,66,0.8));
+    line-height: 1;
+  }
+
+  /* 2カラムランキング */
+  .ranking-columns {
+    width: 100%;
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2%;
+  }
+
+  .ranking-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+  }
+
+  .rank-item {
+    display: flex;
+    align-items: center;
+    height: calc((100% - 9vh) / 5);
+    gap: 1%;
+  }
+
+  .rank-num {
+    width: 11%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .rank-num .num {
+    font-size: clamp(18px, 3.2vw, 44px);
+    font-weight: 900;
+    line-height: 1;
+  }
+  .rank-num .i {
+    font-size: clamp(8px, 1vw, 13px);
+    font-weight: 700;
+  }
+
+  /* 1位 */
+  .rank-item[data-rank="1"] .num,
+  .rank-item[data-rank="1"] .i {
+    background: linear-gradient(180deg, #fff700, #f5c842, #c8860a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 6px rgba(245,200,66,0.9));
+  }
+  /* 2位 */
+  .rank-item[data-rank="2"] .num,
+  .rank-item[data-rank="2"] .i { color: #c0c0c0; text-shadow: 0 0 6px #c0c0c0; }
+  /* 3位 */
+  .rank-item[data-rank="3"] .num,
+  .rank-item[data-rank="3"] .i { color: #cd7f32; text-shadow: 0 0 6px #cd7f32; }
+  /* 4位以下 */
+  .rank-item[data-rank="4"] .num, .rank-item[data-rank="4"] .i,
+  .rank-item[data-rank="5"] .num, .rank-item[data-rank="5"] .i,
+  .rank-item[data-rank="6"] .num, .rank-item[data-rank="6"] .i,
+  .rank-item[data-rank="7"] .num, .rank-item[data-rank="7"] .i,
+  .rank-item[data-rank="8"] .num, .rank-item[data-rank="8"] .i,
+  .rank-item[data-rank="9"] .num, .rank-item[data-rank="9"] .i,
+  .rank-item[data-rank="10"] .num, .rank-item[data-rank="10"] .i { color: #aaaaaa; }
+
+  .name-box {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 4%;
+    border-radius: 5px;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .rank-item[data-rank="1"] .name-box {
+    background: linear-gradient(135deg, #b8960a, #f5e070, #c8a600);
+    box-shadow: 0 0 16px rgba(245,200,66,0.3);
+  }
+  .rank-item[data-rank="2"] .name-box,
+  .rank-item[data-rank="3"] .name-box,
+  .rank-item[data-rank="4"] .name-box,
+  .rank-item[data-rank="5"] .name-box,
+  .rank-item[data-rank="6"] .name-box,
+  .rank-item[data-rank="7"] .name-box,
+  .rank-item[data-rank="8"] .name-box,
+  .rank-item[data-rank="9"] .name-box,
+  .rank-item[data-rank="10"] .name-box { background: #fff; }
+
+  .name-text {
+    font-size: clamp(12px, 2.2vw, 32px);
+    font-weight: 900;
+    opacity: 0;
+    transition: opacity 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .rank-item[data-rank="1"] .name-text { color: #3d2200; }
+  .rank-item[data-rank="2"] .name-text,
+  .rank-item[data-rank="3"] .name-text,
+  .rank-item[data-rank="4"] .name-text,
+  .rank-item[data-rank="5"] .name-text,
+  .rank-item[data-rank="6"] .name-text,
+  .rank-item[data-rank="7"] .name-text,
+  .rank-item[data-rank="8"] .name-text,
+  .rank-item[data-rank="9"] .name-text,
+  .rank-item[data-rank="10"] .name-text { color: #111; }
+
+  .score-box {
+    width: 30%;
+    height: 100%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #050505;
+    border-radius: 5px;
+    border: 1px solid #1a1a1a;
+    min-width: 0;
+  }
+
+  .score-text {
+    font-size: clamp(10px, 2vw, 28px);
+    font-weight: 900;
+    font-family: 'Courier New', monospace;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: #fff;
+    text-shadow:
+      0 0 7px #fff,
+      0 0 10px #0fa,
+      0 0 21px #0fa,
+      0 0 42px #0fa;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<p class="form-title">🎤 BEST10 入力フォーム</p>
+
+<div class="form-card">
+  <div class="form-grid">
+    <!-- 1位〜5位 -->
+    <div>
+      <div class="rank-row" style="margin-bottom:10px;">
+        <span class="rank-label rank-1">🥇1</span>
+        <input type="text" id="name1" placeholder="名前">
+        <input type="text" id="score1" placeholder="点数" style="max-width:80px;">
+      </div>
+      <div class="rank-row" style="margin-bottom:10px;">
+        <span class="rank-label rank-2">🥈2</span>
+        <input type="text" id="name2" placeholder="名前">
+        <input type="text" id="score2" placeholder="点数" style="max-width:80px;">
+      </div>
+      <div class="rank-row" style="margin-bottom:10px;">
+        <span class="rank-label rank-3">🥉3</span>
+        <input type="text" id="name3" placeholder="名前">
+        <input type="text" id="score3" placeholder="点数" style="max-width:80px;">
+      </div>
+      <div class="rank-row" style="margin-bottom:10px;">
+        <span class="rank-label rank-other">4</span>
+        <input type="text" id="name4" placeholder="名前">
+        <input type="text" id="score4" placeholder="点数" style="max-width:80px;">
+      </div>
+      <div class="rank-row">
+        <span class="rank-label rank-other">5</span>
+        <input type="text" id="name5" placeholder="名前">
+        <input type="text" id="score5" placeholder="点数" style="max-width:80px;">
+      </div>
+    </div>
+    <!-- 6位〜10位 -->
+    <div>
+      <div class="rank-row" style="margin-bottom:10px;">
+        <span class="rank-label rank-other">6</span>
+        <input type="text" id="name6" placeholder="名前">
+        <input type="text" id="score6" placeholder="点数" style="max-width:80px;">
+      </div>
+      <div class="rank-row" style="margin-bottom:10px;">
+        <span class="rank-label rank-other">7</span>
+        <input type="text" id="name7" placeholder="名前">
+        <input type="text" id="score7" placeholder="点数" style="max-width:80px;">
+      </div>
+      <div class="rank-row" style="margin-bottom:10px;">
+        <span class="rank-label rank-other">8</span>
+        <input type="text" id="name8" placeholder="名前">
+        <input type="text" id="score8" placeholder="点数" style="max-width:80px;">
+      </div>
+      <div class="rank-row" style="margin-bottom:10px;">
+        <span class="rank-label rank-other">9</span>
+        <input type="text" id="name9" placeholder="名前">
+        <input type="text" id="score9" placeholder="点数" style="max-width:80px;">
+      </div>
+      <div class="rank-row">
+        <span class="rank-label rank-other">10</span>
+        <input type="text" id="name10" placeholder="名前">
+        <input type="text" id="score10" placeholder="点数" style="max-width:80px;">
+      </div>
+    </div>
+  </div>
+  <button class="btn-preview" onclick="startPreview()">▶ プレビューを表示</button>
+</div>
+
+<!-- プレビュー -->
+<div class="preview-overlay" id="previewOverlay">
+  <div class="preview-bg"></div>
+  <div class="curtain-left"></div>
+  <div class="curtain-right"></div>
+  <div class="sparkles" id="sparkles"></div>
+  <button class="preview-close" onclick="closePreview()">×</button>
+
+  <div class="preview-content">
+    <div class="preview-title-sub">つきまちカラオケ大会</div>
+    <div class="preview-title-main">BEST10</div>
+
+    <div class="ranking-columns">
+      <!-- 左カラム：1〜5位 -->
+      <div class="ranking-column" id="col-left">
+        <div class="rank-item" data-rank="1">
+          <div class="rank-num"><span class="num">1</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName1"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore1"></span></div>
+        </div>
+        <div class="rank-item" data-rank="2">
+          <div class="rank-num"><span class="num">2</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName2"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore2"></span></div>
+        </div>
+        <div class="rank-item" data-rank="3">
+          <div class="rank-num"><span class="num">3</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName3"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore3"></span></div>
+        </div>
+        <div class="rank-item" data-rank="4">
+          <div class="rank-num"><span class="num">4</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName4"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore4"></span></div>
+        </div>
+        <div class="rank-item" data-rank="5">
+          <div class="rank-num"><span class="num">5</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName5"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore5"></span></div>
+        </div>
+      </div>
+
+      <!-- 右カラム：6〜10位 -->
+      <div class="ranking-column" id="col-right">
+        <div class="rank-item" data-rank="6">
+          <div class="rank-num"><span class="num">6</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName6"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore6"></span></div>
+        </div>
+        <div class="rank-item" data-rank="7">
+          <div class="rank-num"><span class="num">7</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName7"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore7"></span></div>
+        </div>
+        <div class="rank-item" data-rank="8">
+          <div class="rank-num"><span class="num">8</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName8"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore8"></span></div>
+        </div>
+        <div class="rank-item" data-rank="9">
+          <div class="rank-num"><span class="num">9</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName9"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore9"></span></div>
+        </div>
+        <div class="rank-item" data-rank="10">
+          <div class="rank-num"><span class="num">10</span><span class="i">位</span></div>
+          <div class="name-box"><span class="name-text" id="pName10"></span></div>
+          <div class="score-box"><span class="score-text" id="pScore10"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // localStorage
+  window.addEventListener('load', () => {
+    for (let i = 1; i <= 10; i++) {
+      ['name','score'].forEach(type => {
+        const saved = localStorage.getItem('karaoke10_' + type + i);
+        if (saved) document.getElementById(type + i).value = saved;
+      });
+    }
+  });
+  for (let i = 1; i <= 10; i++) {
+    ['name','score'].forEach(type => {
+      document.getElementById(type + i).addEventListener('input', (e) => {
+        localStorage.setItem('karaoke10_' + type + i, e.target.value);
+      });
+    });
+  }
+
+  // キラキラ
+  function createSparkles() {
+    const container = document.getElementById('sparkles');
+    for (let i = 0; i < 30; i++) {
+      const s = document.createElement('div');
+      s.className = 'sparkle';
+      s.style.left = Math.random() * 100 + '%';
+      s.style.top = Math.random() * 100 + '%';
+      s.style.animationDelay = Math.random() * 3 + 's';
+      s.style.animationDuration = (1.5 + Math.random() * 2) + 's';
+      const size = (2 + Math.random() * 4) + 'px';
+      s.style.width = s.style.height = size;
+      container.appendChild(s);
+    }
+  }
+  createSparkles();
+
+  function startPreview() {
+    const data = [];
+    for (let i = 1; i <= 10; i++) {
+      data.push({
+        name: document.getElementById('name' + i).value,
+        score: document.getElementById('score' + i).value
+      });
+    }
+
+    if (!data[0].name && !data[0].score) {
+      alert('1位の名前か点数を入力してください。');
+      return;
+    }
+
+    // リセット
+    for (let i = 1; i <= 10; i++) {
+      document.getElementById('pName' + i).textContent = '';
+      document.getElementById('pScore' + i).textContent = '';
+      document.getElementById('pName' + i).style.opacity = '0';
+      document.getElementById('pScore' + i).style.opacity = '0';
+    }
+
+    document.getElementById('previewOverlay').classList.add('show');
+
+    // 10位→1位の順で演出
+    for (let i = 10; i >= 1; i--) {
+      const step = 10 - i;
+      const rank = i;
+      setTimeout(() => {
+        animateValue('pName' + rank, data[rank - 1].name, 700);
+        animateValue('pScore' + rank, data[rank - 1].score, 700);
+      }, step * 600);
+    }
+  }
+
+  function animateValue(elId, finalValue, duration) {
+    const el = document.getElementById(elId);
+    if (!finalValue) return;
+    const isScore = elId.startsWith('pScore');
+    const chars = isScore
+      ? '0123456789'
+      : 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん';
+    let elapsed = 0;
+    const interval = 40;
+    el.style.opacity = '1';
+    const timer = setInterval(() => {
+      elapsed += interval;
+      if (elapsed >= duration) {
+        clearInterval(timer);
+        el.textContent = isScore ? finalValue + '点' : finalValue;
+      } else {
+        let r = '';
+        for (let i = 0; i < finalValue.length; i++) {
+          r += chars[Math.floor(Math.random() * chars.length)];
+        }
+        el.textContent = isScore ? r + '点' : r;
+      }
+    }, interval);
+  }
+
+  function closePreview() {
+    document.getElementById('previewOverlay').classList.remove('show');
+  }
+</script>
+</body>
+</html>
